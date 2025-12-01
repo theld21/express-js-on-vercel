@@ -1,4 +1,6 @@
 import express from 'express'
+import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { join } from 'path'
 
 const app = express()
 
@@ -13,7 +15,53 @@ interface UserInfo {
   status: 'none' | 'cancel' | 'active'
 }
 
-const userDataStore: Map<string, UserInfo> = new Map()
+// File path để lưu data (sử dụng /tmp trên Vercel, hoặc local file khi dev)
+const DATA_FILE = process.env.VERCEL 
+  ? '/tmp/userdata.json' 
+  : join(process.cwd(), 'userdata.json')
+
+// Helper functions để load và save data
+function loadData(): Map<string, UserInfo> {
+  const store = new Map<string, UserInfo>()
+  
+  try {
+    if (existsSync(DATA_FILE)) {
+      const fileContent = readFileSync(DATA_FILE, 'utf-8')
+      const data = JSON.parse(fileContent)
+      
+      if (Array.isArray(data)) {
+        // Format cũ: array
+        data.forEach((user: UserInfo) => {
+          store.set(user.email, user)
+        })
+      } else if (typeof data === 'object') {
+        // Format mới: object với email làm key
+        Object.entries(data).forEach(([email, user]) => {
+          store.set(email, user as UserInfo)
+        })
+      }
+    }
+  } catch (error) {
+    console.error('Error loading data:', error)
+  }
+  
+  return store
+}
+
+function saveData(store: Map<string, UserInfo>): void {
+  try {
+    const data: Record<string, UserInfo> = {}
+    store.forEach((user, email) => {
+      data[email] = user
+    })
+    writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8')
+  } catch (error) {
+    console.error('Error saving data:', error)
+  }
+}
+
+// Load data khi khởi động
+const userDataStore = loadData()
 
 // API endpoint GET /api/uinfo
 app.get('/api/uinfo', (req, res) => {
@@ -60,6 +108,7 @@ app.post('/api/users', (req, res) => {
   
   const userInfo: UserInfo = { email, plan_type, status }
   userDataStore.set(email, userInfo)
+  saveData(userDataStore)
   
   res.json(userInfo)
 })
@@ -89,6 +138,7 @@ app.put('/api/users/:email', (req, res) => {
   }
   
   userDataStore.set(email, updatedUser)
+  saveData(userDataStore)
   res.json(updatedUser)
 })
 
@@ -101,6 +151,7 @@ app.delete('/api/users/:email', (req, res) => {
   }
   
   userDataStore.delete(email)
+  saveData(userDataStore)
   res.json({ message: 'User deleted successfully' })
 })
 
