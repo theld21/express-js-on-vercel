@@ -163,7 +163,7 @@ app.get('/', (req, res) => {
       <head>
         <meta charset="utf-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>User Management</title>
+        <title>Fake NX Contract</title>
         <link rel="stylesheet" href="/style.css" />
       </head>
       <body>
@@ -199,9 +199,9 @@ app.get('/', (req, res) => {
               <div class="form-group">
                 <label for="status">Status:</label>
                 <select id="status" name="status" required>
-                  <option value="none">none</option>
-                  <option value="cancel">cancel</option>
-                  <option value="active">active</option>
+                  <option value="none">支払方法未登録 (None)</option>
+                  <option value="active">利用中 (Active)</option>
+                  <option value="cancel">利用停止 (Cancel)</option>
                 </select>
               </div>
               <div class="form-actions">
